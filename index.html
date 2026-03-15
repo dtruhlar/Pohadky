@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pohádky">
+  <meta name="theme-color" content="#0d0d1f">
+  <title>Moje Pohádky</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d1f;
+      --card: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.10);
+      --text: #f0eee8;
+      --muted: rgba(240,238,232,0.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; width: 100%; background: var(--bg); color: var(--text); font-family: 'Lora', Georgia, serif; overflow: hidden; }
+
+    /* STARS */
+    #stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* VIEWS */
+    .view { position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; transition: opacity 0.4s ease, transform 0.4s ease; }
+    .view.hidden { opacity: 0; pointer-events: none; transform: translateX(40px); }
+
+    /* LIBRARY */
+    #library { overflow-y: auto; padding: 0 20px 40px; background: linear-gradient(180deg, #0d0d1f 0%, #12102a 100%); }
+    .lib-header { padding-top: max(env(safe-area-inset-top), 52px); padding-bottom: 32px; }
+    .lib-header .moon { font-size: 48px; display: block; margin-bottom: 10px; }
+    .lib-header .subtitle { font-size: 14px; color: var(--muted); font-style: italic; margin-bottom: 4px; }
+    .lib-header h1 { font-size: 36px; font-weight: 700; letter-spacing: -0.5px; }
+    .story-card {
+      display: flex; align-items: center; gap: 18px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 18px 20px; margin-bottom: 14px; cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+      animation: cardIn 0.5s ease both;
+    }
+    .story-card:active { transform: scale(0.97); background: rgba(255,255,255,0.10); }
+    .story-card:nth-child(1){animation-delay:.3s} .story-card:nth-child(2){animation-delay:.42s} .story-card:nth-child(3){animation-delay:.54s}
+    @keyframes cardIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .card-bubble { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+    .card-info { flex: 1; }
+    .card-name { font-size: 17px; font-weight: 600; line-height: 1.3; }
+    .card-pages { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .card-arrow { color: var(--muted); font-size: 18px; }
+    .soon-card {
+      display: flex; align-items: center; gap: 18px;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 20px; padding: 18px 20px; opacity: 0.35;
+      animation: cardIn 0.5s ease 0.66s both;
+    }
+    .soon-bubble { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+
+    /* STORY */
+    #story { justify-content: space-between; transition: background-color 0.6s ease, opacity 0.4s ease, transform 0.4s ease; }
+    .story-topbar { display: flex; align-items: center; justify-content: space-between; padding: max(env(safe-area-inset-top), 52px) 20px 0; flex-shrink: 0; }
+    .back-btn { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.25); border: none; color: rgba(255,255,255,0.8); font-family: inherit; font-size: 14px; padding: 8px 14px; border-radius: 50px; cursor: pointer; }
+    .dots { display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 50px; }
+    .dot { border-radius: 50%; background: rgba(255,255,255,0.3); width: 6px; height: 6px; transition: all 0.3s ease; }
+    .dot.active { background: white; width: 8px; height: 8px; }
+
+    .story-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 24px; text-align: center; }
+    .page-emoji { font-size: 80px; margin-bottom: 20px; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4)); }
+    .page-emoji.pop { animation: emojiPop 0.5s cubic-bezier(.34,1.56,.64,1) forwards; }
+    @keyframes emojiPop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+    .page-title { font-size: 34px; font-weight: 700; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.3); margin-bottom: 20px; }
+    .page-text { font-size: 18px; line-height: 1.75; color: rgba(255,255,255,0.92); background: rgba(0,0,0,0.28); border-radius: 20px; padding: 22px 20px; }
+    .fade-out { animation: fadeOut 0.25s ease forwards; }
+    .fade-in  { animation: fadeIn  0.4s ease forwards; }
+    @keyframes fadeOut { to{opacity:0;transform:translateY(-10px)} }
+    @keyframes fadeIn  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+    .story-bottom { flex-shrink: 0; padding: 0 20px max(env(safe-area-inset-bottom), 28px); display: flex; flex-direction: column; gap: 12px; }
+    .tts-row { display: flex; justify-content: center; gap: 10px; align-items: center; }
+    .tts-btn { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.30); border: 1px solid rgba(255,255,255,0.20); color: white; font-family: inherit; font-size: 14px; padding: 11px 20px; border-radius: 50px; cursor: pointer; transition: all 0.2s; }
+    .tts-btn.active { border-color: rgba(255,255,255,0.55); }
+    .tts-stop { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .tts-stop.hidden { opacity: 0; pointer-events: none; transform: scale(0.7); }
+    .nav-row { display: flex; gap: 12px; }
+    .nav-btn { flex: 1; padding: 16px; border: none; border-radius: 16px; font-family: inherit; font-size: 16px; cursor: pointer; transition: transform 0.15s; }
+    .nav-btn:active { transform: scale(0.97); }
+    .btn-back { background: rgba(0,0,0,0.30); color: white; }
+    .btn-back:disabled { opacity: 0.25; }
+    .btn-next { background: rgba(255,255,255,0.92); color: #111; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<!-- LIBRARY -->
+<div class="view" id="library">
+  <div class="lib-header">
+    <span class="moon">🌙</span>
+    <div class="subtitle">Vyber pohádku pro dcerku</div>
+    <h1>Knihovnička</h1>
+  </div>
+  <div id="cards"></div>
+</div>
+
+<!-- STORY -->
+<div class="view hidden" id="story">
+  <div class="story-topbar">
+    <button class="back-btn" onclick="goHome()">‹ Knihovnička</button>
+    <div class="dots" id="dots"></div>
+  </div>
+  <div class="story-content">
+    <div class="page-emoji" id="pgEmoji"></div>
+    <div class="page-title" id="pgTitle"></div>
+    <div class="page-text"  id="pgText"></div>
+  </div>
+  <div class="story-bottom">
+    <div class="tts-row">
+      <button class="tts-btn" id="ttsBtn" onclick="toggleTTS()">
+        <span id="ttsIcon">🔊</span>
+        <span id="ttsLabel">Přečíst nahlas</span>
+      </button>
+      <button class="tts-stop hidden" id="ttsStop" onclick="stopTTS()">■</button>
+    </div>
+    <div class="nav-row">
+      <button class="nav-btn btn-back" id="btnBack" onclick="changePage(-1)" disabled>← Zpět</button>
+      <button class="nav-btn btn-next" id="btnNext" onclick="changePage(1)">Další →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── DATA ── */
+const LIBRARY = [
+  { name:"Zvířátka v lesní školce", emoji:"🐾", color:"#7a3e0f",
+    pages:[
+      {emoji:"🐻",title:"Medvídek",color:"#b8561a",text:"Podívej, zlatíčko, náš malý kamarád medvídek už na nás čeká. Celý den si hrál a teď už se protahuje, protože ví, že je čas na spinkání."},
+      {emoji:"🐰",title:"Králíček",color:"#b03020",text:"A hele, králíček! Ten měl dneska velký hlad a našel si tři krásné mrkvičky. Teď už má bříško plné a hledá si místečko v pelíšku."},
+      {emoji:"🐱",title:"Kočička a myška",color:"#703090",text:"Už svítí měsíček! Kočička si hrála s klubíčkem, ale už je unavená. Zašeptáme: Dobrou noc, kočičko, dobrou noc, myško."},
+      {emoji:"🐔",title:"Slepička",color:"#a06810",text:"Maminka slepička svolává kuřátka pod křídla. Jsou tam v teple a bezpečí a maminka je kolébá, aby se jim krásně spalo."},
+      {emoji:"🐝",title:"Včelka",color:"#1a2744",text:"A nakonec včelka. Celý den pilně létala z kvítku na kvítek a teď už letí do útulného úlu odpočívat. Všechna zvířátka už spí... a teď budeš spinkat i ty, moje zlatíčko."}
+    ]
+  },
+  { name:"Pohádka o hvězdičce", emoji:"⭐️", color:"#0f1456",
+    pages:[
+      {emoji:"⭐️",title:"Malá hvězdička",color:"#1a237e",text:"Daleko, daleko na obloze žila malá hvězdička. Každý večer svítila dětem do okýnka a šeptala jim: Spi, spi, moje milé."},
+      {emoji:"🌙",title:"Měsíček",color:"#2e1760",text:"Vedle hvězdičky bydlel měsíček. Byl kulatý a zlatý jako maminčin koláč. Každou noc hlídal děti a svítil jim jako zlatá lampička."},
+      {emoji:"🌟",title:"Dobrou noc",color:"#0d1035",text:"Hvězdička a měsíček se domluvili: budou dětem svítit celou noc. Zavři očička, moje zlatíčko, hvězdičky na tebe čekají ve snech."}
+    ]
+  },
+  { name:"Ježeček a veverka", emoji:"🦔", color:"#1a4a1e",
+    pages:[
+      {emoji:"🦔",title:"Ježeček Jeník",color:"#1e5e24",text:"V hlubokém lese pod starým dubem bydlel malý ježeček Jeník. Celé léto sbíral houbičky a jablíčka na zimu."},
+      {emoji:"🐿️",title:"Veverka Zrzečka",color:"#8b3e0a",text:"Jeho kamarádka veverka Zrzečka skákala po větvích a sbírala oříšky. Schovávala je do díry v dubu, aby je měla na sněhové dny."},
+      {emoji:"❄️",title:"Zimní spánek",color:"#1c3048",text:"Když přišel první sníh, Jeník se natočil do klubíčka ve svém pelíšku. Zrzečka mu přinesla poslední oříšek. Spi sladce, šeptala. A teď spi i ty, moje zlatíčko."}
+    ]
+  }
+];
+
+/* ── STARS ── */
+(function(){
+  const c=document.getElementById('stars'), ctx=c.getContext('2d');
+  let S=[];
+  function resize(){ c.width=innerWidth; c.height=innerHeight;
+    S=Array.from({length:80},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+0.3,lo:Math.random()*.12+.04,hi:Math.random()*.45+.15,t:Math.random()*Math.PI*2,sp:Math.random()*.008+.004})); }
+  function draw(){ ctx.clearRect(0,0,c.width,c.height); const n=Date.now()/1000;
+    S.forEach(s=>{ const a=s.lo+(s.hi-s.lo)*(0.5+0.5*Math.sin(n*s.sp*60+s.t));
+      ctx.beginPath(); ctx.arc(s.x*c.width,s.y*c.height,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fill(); }); requestAnimationFrame(draw); }
+  window.addEventListener('resize',resize); resize(); draw();
+})();
+
+/* ── LIBRARY BUILD ── */
+const cardsEl = document.getElementById('cards');
+LIBRARY.forEach((st,i)=>{
+  const d=document.createElement('div'); d.className='story-card';
+  d.innerHTML=`<div class="card-bubble" style="background:${st.color}33">${st.emoji}</div><div class="card-info"><div class="card-name">${st.name}</div><div class="card-pages">${st.pages.length} stránek</div></div><div class="card-arrow">›</div>`;
+  d.onclick=()=>openStory(i); cardsEl.appendChild(d);
+});
+const soon=document.createElement('div'); soon.className='soon-card';
+soon.innerHTML='<div class="soon-bubble">✨</div><div class="card-info"><div class="card-name">Další pohádka</div><div class="card-pages">Již brzy...</div></div>';
+cardsEl.appendChild(soon);
+
+/* ── STATE ── */
+let cur=null, page=0, ttsOn=false, ttsPaused=false;
+
+/* ── OPEN / CLOSE ── */
+function openStory(i){
+  cur=LIBRARY[i]; page=0; stopTTS();
+  buildDots(); renderPage(true);
+  document.getElementById('library').classList.add('hidden');
+  const sv=document.getElementById('story');
+  sv.style.backgroundColor=cur.pages[0].color;
+  sv.classList.remove('hidden');
+  try{ navigator.wakeLock && navigator.wakeLock.request('screen'); }catch(e){}
+}
+function goHome(){ stopTTS(); document.getElementById('story').classList.add('hidden'); document.getElementById('library').classList.remove('hidden'); }
+
+/* ── PAGE ── */
+function changePage(dir){
+  stopTTS();
+  if(dir===1 && page===cur.pages.length-1){ goHome(); return; }
+  if(dir===-1 && page===0) return;
+  const t=document.getElementById('pgTitle'), tx=document.getElementById('pgText');
+  t.classList.add('fade-out'); tx.classList.add('fade-out');
+  setTimeout(()=>{ page+=dir; renderPage(false); },240);
+}
+function renderPage(first){
+  const p=cur.pages[page];
+  document.getElementById('story').style.backgroundColor=p.color;
+  const em=document.getElementById('pgEmoji');
+  em.textContent=p.emoji; em.classList.remove('pop'); void em.offsetWidth; em.classList.add('pop');
+  const t=document.getElementById('pgTitle'), tx=document.getElementById('pgText');
+  t.textContent=p.title; tx.textContent=p.text;
+  t.classList.remove('fade-out','fade-in'); tx.classList.remove('fade-out','fade-in');
+  void t.offsetWidth;
+  if(!first){ t.classList.add('fade-in'); tx.classList.add('fade-in'); }
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===page));
+  document.getElementById('btnBack').disabled=page===0;
+  document.getElementById('btnNext').textContent=page===cur.pages.length-1?'Konec 🌙':'Další →';
+  updateTTSUI();
+}
+function buildDots(){
+  document.getElementById('dots').innerHTML=cur.pages.map((_,i)=>`<div class="dot${i===0?' active':''}"></div>`).join('');
+}
+
+/* ── TTS ── */
+function toggleTTS(){
+  if(!window.speechSynthesis) return;
+  if(ttsOn && !ttsPaused){ speechSynthesis.pause(); ttsPaused=true; }
+  else if(ttsOn && ttsPaused){ speechSynthesis.resume(); ttsPaused=false; }
+  else startTTS();
+  updateTTSUI();
+}
+function startTTS(){
+  stopTTS();
+  const p=cur.pages[page];
+  const u=new SpeechSynthesisUtterance(p.title+'. '+p.text);
+  u.lang='cs-CZ'; u.rate=0.88; u.pitch=1.05;
+  const v=speechSynthesis.getVoices().find(x=>x.lang.startsWith('cs'));
+  if(v) u.voice=v;
+  u.onstart=()=>{ ttsOn=true; ttsPaused=false; updateTTSUI(); };
+  u.onend=u.onerror=()=>{ ttsOn=false; ttsPaused=false; updateTTSUI(); };
+  speechSynthesis.speak(u); ttsOn=true;
+}
+function stopTTS(){ if(window.speechSynthesis) speechSynthesis.cancel(); ttsOn=false; ttsPaused=false; updateTTSUI(); }
+function updateTTSUI(){
+  const btn=document.getElementById('ttsBtn'), icon=document.getElementById('ttsIcon'), lbl=document.getElementById('ttsLabel'), stp=document.getElementById('ttsStop');
+  if(ttsOn&&!ttsPaused){icon.textContent='⏸';lbl.textContent='Pauza';btn.classList.add('active');}
+  else if(ttsOn&&ttsPaused){icon.textContent='▶';lbl.textContent='Pokračovat';btn.classList.add('active');}
+  else{icon.textContent='🔊';lbl.textContent='Přečíst nahlas';btn.classList.remove('active');}
+  stp.classList.toggle('hidden',!ttsOn);
+}
+if(window.speechSynthesis){ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices(); }
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopTTS(); });
+</script>
+</body>
+</html>
